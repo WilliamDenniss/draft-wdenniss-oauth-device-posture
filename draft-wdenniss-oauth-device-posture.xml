@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" docName="draft-wdenniss-oauth-device-posture-00"
+    ipr="trust200902">
+
+  <front>
+
+    <title>OAuth 2.0 Device Posture Signals</title>
+
+    <author fullname="William Denniss" initials="W." surname="Denniss">
+      <organization>Google</organization>
+      <address>
+        <postal>
+          <street>1600 Amphitheatre Pkwy</street>
+          <city>Mountain View</city>
+          <region>CA</region>
+          <code>94043</code>
+          <country>USA</country>
+        </postal>
+        <phone>+1 650-253-0000</phone>
+        <facsimile/>
+        <email>wdenniss@google.com</email>
+        <uri>http://google.com/</uri>
+      </address>
+    </author>
+
+    <date day="11" month="March" year="2017"/>
+    <area>Security</area>
+    <workgroup>OAuth Working Group</workgroup>
+
+    <abstract>
+      <t>
+        Enterprise and security focused OAuth providers typically want
+        additional signals to confirm user presence when users return to
+        previously authorized apps. Rather than requiring a full
+        reauthentication, or require enrollment in a mobile device
+        management solution, some authorization servers may be willing to accept
+        device posture signals from the app, like the fact that device has a
+        lock screen, as confirmation of user presence. This document details how
+        OAuth native app clients can communicate device posture signals to OAuth
+        providers.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section title="Introduction" anchor="intro">
+      <t>
+        Users who follow strong security practices on their devices - such
+        as configuring screen locks, and not enabling admin privileges (commonly
+        known as "rooting" or "jailbreaking") - shouldn't need to reauthenticate
+        frequently to the individual apps on their device. 
+      </t>
+      <t>
+        This specification details how apps can send device posture signals to
+        the OAuth Token Endpoint, enabling it to enforce device policy
+        compliance, and avoid the need for reauthentication in some cases.
+      </t>
+      <t>
+        It is designed to provide a mechanism
+        for honest apps to communicate device posture. By itself it doesn't
+        protect against malicious users, dishonest apps, or compromised devices,
+        but the signal format described could carry signals that do.
+      </t>
+    </section>
+    <section title="Notational Conventions" anchor="NotationalConventions">
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+        "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY",
+        and "OPTIONAL" in this document are to be interpreted as described in
+        Key words for use in RFCs to Indicate Requirement Levels
+        <xref target='RFC2119' />. If these words are used without being spelled
+        in uppercase then they are to be interpreted with their normal natural
+        language meanings.
+      </t>
+    </section>
+
+<!-->
+    <section title="Terminology" anchor="terminology">
+      <t>
+        In addition to the terms defined in referenced specifications, this
+        document uses the following terms:
+      </t>
+      <t>
+        <list style="hanging">
+          <t hangText="MDM"><vspace/>
+            Mobile Device Management.
+          </t>
+        </list>
+      </t>
+    </section>
+-->
+
+    <section title="Device Posture Signal Dictionary" anchor="device_posture_signals">
+      <t>
+        The device posture is a dictionary of signals asserted
+        by the app about the device. The structure is send as an added
+        parameter in several places during the OAuth flow, as documented in the
+        subsequent sections.
+      </t>
+      <t>
+        All device posture keys are OPTIONAL and MUST only be set when the
+        attribute can be obtained by the app. The standard attribute keys are as
+        follows:
+      </t>
+      <t>
+        <list style="hanging"> 
+          <t hangText="screen_lock"><vspace/>
+          Boolean.  True if the user has a screen lock, such as a pin, pattern
+          biometric, etc.
+          </t> 
+
+          <t hangText="root_privileges"><vspace/>
+          Boolean. True if user apps can access root device privileges. For mobile
+          operating systems, known as "jailbreaking" on iOS and "rooting" on
+          Android.
+          </t>
+
+          <t hangText="device_attestation"> <vspace/>
+          Dictionary. An attestation from the operating system, containing
+          a signed-statement about the device and/or the app. The format is 
+          a dictionary, the specifics of which depends on the operating system.
+          </t>
+        </list> 
+      </t> 
+
+	<t>
+    An example device posture dictionary:
+  </t>
+  <t>
+	  <figure><artwork><![CDATA[
+{
+    "screen_lock": true,
+    "root_privileges": false
+}]]></artwork></figure>
+	</t> 
+    </section>
+
+
+
+    <section title="Authorization Request Device Posture Hint" anchor="authorization_request">
+      <t>
+        Clients MAY send the device posture signal dictionary to the authorization server
+        in the authorization request. These signals, except for those that are
+        signed and bound to the device are susceptible to client-side
+        modification by end-users. While untrusted, such signals can still be
+        used as hints by the authorization server to present a better user
+        experience, like informing the user they need a lock screen.
+      </t>
+      <t>
+        Error encountered during authorization can be displayed to the user in
+        the browser making this a more user friendly way to instruct the user on
+        how to move their device into conformance. The token endpoint (on which
+        errors are less user-friendly as there's no user agent), can then
+        enforce the restrictions per <xref target="token_endpoint"/>.
+      </t>
+
+      <t>
+        The following parameters are added to the OAuth 2.0 Authorization
+        Request:
+      </t>
+
+      <t>
+        <list style="hanging"> 
+          <t hangText="device_posture_hint"><vspace/>
+          JSON String.  URL-encoded JSON dictionary, contains the Device
+        Posture Signals defined in <xref target="device_posture_signals"/>.
+          </t> 
+        </list> 
+      </t> 
+    </section>
+
+        <section title="Token Endpoint Device Posture Enforcement" anchor="token_endpoint">
+      <t>
+        Clients that follow this specification MUST send the device posture
+        signals on every request to the token endpoint.
+      </t>
+
+      <t>
+      Token Endpoints SHOULD verify that the posture conforms to their
+      requirements and act accordingly.
+      </t>
+
+      <t>
+        The following parameters are added to all requests to the Token
+        Endpoint:
+      </t>
+
+      <t>
+        <list style="hanging"> 
+          <t hangText="device_posture"><vspace/>
+          JSON String.  URL-encoded JSON dictionary, contains the Device
+        Posture Signals defined in <xref target="device_posture_signals"/>.
+          </t> 
+        </list> 
+      </t> 
+
+      <t>
+      The app MUST obtain fresh device posture  information before
+      every request to the Token Endpoint, and MUST NOT include stale
+      information (rather, it should drop any signals it cannot freshly obtain).
+      </t>
+
+      <t>
+      For token refresh requests, where the device posture has been previously
+      communicated, if an attribute is missing, the Token Endpoint may choose
+      to use the previous value, based on it's own policy and freshness
+      requirements.
+      </t>
+
+      <t>
+        If the policy does not meet requirements, the Token Endpoint
+        SHOULD return the following error code:
+      </t>
+      <t>
+        <list style="hanging"> 
+          <t hangText="device_posture_invalid"><vspace/>
+          Error indicating that the device posture does not meet requirements.
+          The error description SHOULD contain details on why this is is the case.
+          </t> 
+        </list> 
+      </t> 
+    </section>
+
+    <section title="Security Considerations" anchor="security-considerations">
+      <section title="Device Posture Scope" anchor="scope">
+        <t>
+          This specification is designed to help authorization servers enforce
+          security policy (like requiring a lock screen) on end-users.
+          The intent is to enforce restrictions on honest users, to force them
+          to follow security practices set out by the authorization server.
+          By itself, it offers no protection against malicious users,
+          dishonest apps, or compromised devices.
+        </t>
+        <t>
+          Combined with other technologies like device-based attestations and
+          token binding may enable such protection, and this specification could
+          be used to transmit secure signals, but that topic is out of scope
+          for this specification.
+        </t>
+      </section>
+      <section title="Spoofed Devices" anchor="spoofed-devices">
+        <t>
+          It is possible to at a device level completely spoof the device
+          posture. Even statements signed by the operating system are vulnerable
+          to spoofing, as it's possible a statement from the real device can
+          be replayed on a spoofed device, unless such statements include
+          a binding to the device itself. Per <xref target="scope"/>, this topic
+          is out of scope for this specification.
+        </t>
+      </section>
+      <section title="App Trustworthiness" anchor="app-trust">
+        <t>
+          This specification is designed to allow trusted apps to report device
+          posture to the authorization server to help the server enforce
+          security policy on end-users. It does not by itself force apps to be
+          honest, or genuine. Genuine apps (i.e. apps not lying about their
+          client ID) might be dishonest about the device posture, and
+          apps that are normally honest, could be spoofed, unless anti-spoofing
+          countermeasures that are out of scope of this specification are employed.
+        </t>
+      </section>
+    </section>
+    <section anchor="IANA" title="IANA Considerations">
+
+      <section anchor="OAuthParametersReg" title="OAuth Parameters Registration">
+        <t>
+          This specification registers the following value
+          in the IANA "OAuth Parameters" registry
+          <xref target="IANA.OAuth.Parameters"/>
+          established by <xref target="RFC6749"/>.
+        </t>
+        <section anchor="ParametersContents" title="Registry Contents">
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style='symbols'>
+              <t>Parameter name: device_posture_hint</t>
+              <t>Parameter usage location: authorization request</t>
+              <t>Change controller: IESG</t>
+              <t>Specification document(s): <xref target="authorization_request"/> of [[ this specification ]]</t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style='symbols'>
+              <t>Parameter name: device_posture</t>
+              <t>Parameter usage location: token request</t>
+              <t>Change controller: IESG</t>
+              <t>Specification document(s): <xref target="token_endpoint"/> of [[ this specification ]]</t>
+            </list>
+          </t>
+        </section>
+      </section>
+
+      <section anchor="OAuthErrReg" title="OAuth Extensions Error Registration">
+        <t>
+          This specification registers the following error in
+          the IANA "OAuth Extensions Error Registry"
+          <xref target="IANA.OAuth.Parameters"/>
+          established by <xref target="RFC6749"/>.
+        </t>
+        <section anchor="ErrorssContents" title="Registry Contents">
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style='symbols'>
+              <t>Error name: device_posture_invalid</t>
+              <t>Error usage location: authorization response, token error response</t>
+              <t>Related protocol extension: resource parameter</t>
+              <t>Change controller: IESG</t>
+              <t>Specification document(s): <xref target="token_endpoint"/> of [[ this specification ]]</t>
+            </list>
+          </t>
+        </section>
+      </section>
+
+     <section title="Device Posture Keys Registry" anchor="postureRegistry">
+      <t>
+        This specification establishes the
+        IANA "Device Posture Keys" registry
+        for Device Posture Dictionary keys.
+        The registry records the Device Posture key
+        and a reference to the specification that defines it.
+        This specification registers the Device Posture keys
+        defined in <xref target="device_posture_signals"/>.
+      </t>
+      <t>
+        Keys are registered on an Expert Review
+        <xref target="RFC5226"/> basis after a three-week review period on the oauth-reg-review@ietf.org mailing
+        list, on the advice of one or more Designated Experts.
+      </t>
+        <t>
+          Registration requests sent to the mailing list for review should use
+          an appropriate subject
+          (e.g., "Request to register Device Posture Key: screen_lock").
+        </t>
+        <t>
+          Within the review period, the Designated Experts will either approve or
+          deny the registration request, communicating this decision to the review list and IANA.
+          Denials should include an explanation and, if applicable, suggestions as to how to make
+          the request successful.
+          Registration requests that are undetermined for
+          a period longer than 21 days can be brought to the IESG's attention
+          (using the iesg@ietf.org mailing list) for resolution.
+        </t>
+        <t>
+          Criteria that should be applied by the Designated Experts includes
+          determining whether the proposed registration duplicates existing functionality,
+          whether it is likely to be of general applicability
+          or whether it is useful only for a single application,
+          whether the value is actually being used,
+          and whether the registration description is clear.
+        </t>
+        <t>
+          IANA must only accept registry updates from the Designated Experts and should direct
+          all requests for registration to the review mailing list.
+        </t>
+        <t>
+          It is suggested that the same Designated Experts evaluate these
+          registration requests as those who evaluate registration requests
+          for the IANA "OAuth Parameters" registry <xref target="IANA.OAuth.Parameters"/>.
+        </t>
+
+        <section title="Registration Template" anchor="postureTemplate">
+          <t>
+            <list style="hanging">
+              <t hangText="Device Posture Signal Key:">
+                <vspace/>
+                The key name requested (e.g., "screen_lock").
+                Names may not match other registered names in a case-insensitive manner
+                unless the Designated Experts state that there is a compelling reason
+                to allow an exception.
+              </t>
+              <t hangText="Device Posture Signal Key Description:">
+                <vspace/>
+                Brief description of the device posture signal
+                (e.g., "Screen lock active").
+              </t>
+              <t hangText="Change Controller:">
+                <vspace/>
+                For Standards Track RFCs, state "IESG". For others, give the name of the
+                responsible party. Other details (e.g., postal address, email address, home page
+                URI) may also be included.
+              </t>
+              <t hangText="Specification Document(s):">
+                <vspace/>
+                Reference to the document or documents that specify the parameter,
+                preferably including URIs that
+                can be used to retrieve copies of the documents.
+                An indication of the relevant
+                sections may also be included but is not required.
+              </t>
+            </list>
+          </t>
+        </section>
+
+        <section title="Initial Registry Contents" anchor="postureRegistrations">
+          <t> 
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">screen_lock</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description: Boolean. 'true' when the device has a screen lock enabled.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t> 
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">root_privileges</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  Boolean.  True if user apps can access root device privileges.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t> 
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_attestation</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  Dictionary. An attestation
+                from the operating system, containing a signed-statement about
+                the device and/or the app.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+        </section>
+      </section>
+    </section>
+
+
+
+  </middle>
+
+  <back>
+
+    <references title="Normative References">
+      <?rfc include='reference.RFC.2119'?>
+      <?rfc include='reference.RFC.6749'?>
+      <?rfc include='reference.RFC.5226'?>
+      <reference anchor="IANA.OAuth.Parameters" target="http://www.iana.org/assignments/oauth-parameters">
+        <front>
+          <title>OAuth Parameters</title>
+          <author>
+            <organization>IANA</organization>
+          </author>
+          <date/>
+        </front>
+      </reference>
+    </references>
+
+    <references title="Informative References">
+      <?rfc include='reference.RFC.6819'?>
+    </references>
+
+    <section title="Acknowledgements" anchor="Acknowledgements">
+      <t>
+        The following individuals contributed ideas, feedback, and wording
+        that shaped and formed the final specification:
+      </t>
+      <t>
+        Eric Sachs, John Bradley, and Andy Zmolek.
+      </t>
+    </section>
+
+  </back>
+</rfc>
