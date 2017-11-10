@@ -34,6 +34,23 @@
       </address>
     </author>
 
+    <author fullname="Karl McGuinness" initials="KM" surname="McGuinness">
+      <organization>Okta</organization>
+      <address>
+        <postal>
+          <street>301 Brannan St.</street>
+          <city>San Francisco</city>
+          <region>CA</region>
+          <code>94107</code>
+          <country>USA</country>
+        </postal>
+        <phone/>
+        <facsimile/>
+        <email>kmcguinness@okta.com</email>
+        <uri>https://www.okta.com/</uri>
+      </address>
+    </author>
+
     <date day="11" month="March" year="2017"/>
     <area>Security</area>
     <workgroup>OAuth Working Group</workgroup>
@@ -59,7 +76,7 @@
         Users who follow strong security practices on their devices - such
         as configuring screen locks, and not enabling admin privileges (commonly
         known as "rooting" or "jailbreaking") - shouldn't need to reauthenticate
-        frequently to the individual apps on their device. 
+        frequently to the individual apps on their device.
       </t>
       <t>
         This specification details how apps can send device posture signals to
@@ -85,7 +102,6 @@
       </t>
     </section>
 
-<!-->
     <section title="Terminology" anchor="terminology">
       <t>
         In addition to the terms defined in referenced specifications, this
@@ -96,10 +112,13 @@
           <t hangText="MDM"><vspace/>
             Mobile Device Management.
           </t>
+
+          <t hangText="EMM"><vspace/>
+            Enterprise Mobility Management.
+          </t>
         </list>
       </t>
     </section>
--->
 
     <section title="Device Posture Signal Dictionary" anchor="device_posture_signals">
       <t>
@@ -114,11 +133,11 @@
         follows:
       </t>
       <t>
-        <list style="hanging"> 
+        <list style="hanging">
           <t hangText="screen_lock"><vspace/>
-          Boolean.  True if the user has a screen lock, such as a pin, pattern
+          Boolean. True if the device has a screen lock, such as a pin, pattern
           biometric, etc.
-          </t> 
+          </t>
 
           <t hangText="root_privileges"><vspace/>
           Boolean. True if user apps can access root device privileges. For mobile
@@ -126,13 +145,49 @@
           Android.
           </t>
 
+          <t hangText="full_disk_encryption"><vspace/>
+          Boolean. True if data stored on the device is fully encrypted at rest.
+          </t>
+
+          <t hangText="device_id"><vspace/>
+          String. A unique identifier for the device.
+          </t>
+
+          <t hangText="device_os"><vspace/>
+          String. The name of the operating system running on the device such as
+          "iOS" or "Android".
+          </t>
+
+          <t hangText="device_os_version"><vspace/>
+          String. The current version of the operating system.
+          </t>
+
+          <t hangText="device_vendor"><vspace/>
+          String. The vendor of the device such as "Apple" or "Google".
+          </t>
+
+          <t hangText="device_model"><vspace/>
+          String. The model of the device such as "iPhone X" or "Pixel 2".
+          </t>
+
           <t hangText="device_attestation"> <vspace/>
           Dictionary. An attestation from the operating system, containing
-          a signed-statement about the device and/or the app. The format is 
+          a signed-statement about the device and/or the app. The format is
           a dictionary, the specifics of which depends on the operating system.
           </t>
-        </list> 
-      </t> 
+
+          <t hangText="app_id"><vspace/>
+          String. The platform-specific identifier (URI) for the application.
+          For Android, the format of the URI is android:apk-key-hash:&lt;hash-of-apk-signing-cert&gt;.
+          For iOS, the format of URI is ios:bundle-id:&lt;ios-bundle-id-of-app&gt;.
+          </t>
+
+          <t hangText="app_managed"><vspace/>
+          Boolean. True if the app is managed by a MDM/EMM system.
+          </t>
+
+        </list>
+      </t>
 
 	<t>
     An example device posture dictionary:
@@ -141,9 +196,17 @@
 	  <figure><artwork><![CDATA[
 {
     "screen_lock": true,
-    "root_privileges": false
+    "root_privileges": false,
+    "full_disk_encryption": true,
+    "device_id": "6bdde1e8-0667-40f9-9993-16aa52ee6b38",
+    "device_os": "iOS",
+    "device_os_version": "11.1",
+    "device_vendor": "Apple",
+    "device_model": "iPhone X",
+    "app_id": "ios:bundle-id:com.example.myapp",
+    "app_managed": false
 }]]></artwork></figure>
-	</t> 
+	</t>
     </section>
 
 
@@ -171,13 +234,13 @@
       </t>
 
       <t>
-        <list style="hanging"> 
+        <list style="hanging">
           <t hangText="device_posture_hint"><vspace/>
           JSON String.  URL-encoded JSON dictionary, contains the Device
         Posture Signals defined in <xref target="device_posture_signals"/>.
-          </t> 
-        </list> 
-      </t> 
+          </t>
+        </list>
+      </t>
     </section>
 
         <section title="Token Endpoint Device Posture Enforcement" anchor="token_endpoint">
@@ -197,13 +260,13 @@
       </t>
 
       <t>
-        <list style="hanging"> 
+        <list style="hanging">
           <t hangText="device_posture"><vspace/>
           JSON String.  URL-encoded JSON dictionary, contains the Device
         Posture Signals defined in <xref target="device_posture_signals"/>.
-          </t> 
-        </list> 
-      </t> 
+          </t>
+        </list>
+      </t>
 
       <t>
       The app MUST obtain fresh device posture  information before
@@ -223,13 +286,13 @@
         SHOULD return the following error code:
       </t>
       <t>
-        <list style="hanging"> 
+        <list style="hanging">
           <t hangText="device_posture_invalid"><vspace/>
           Error indicating that the device posture does not meet requirements.
           The error description SHOULD contain details on why this is is the case.
-          </t> 
-        </list> 
-      </t> 
+          </t>
+        </list>
+      </t>
     </section>
 
     <section title="Security Considerations" anchor="security-considerations">
@@ -404,7 +467,7 @@
         </section>
 
         <section title="Initial Registry Contents" anchor="postureRegistrations">
-          <t> 
+          <t>
             <?rfc subcompact="yes"?>
             <list style="symbols">
               <t>
@@ -421,7 +484,7 @@
               </t>
             </list>
           </t>
-          <t> 
+          <t>
             <?rfc subcompact="yes"?>
             <list style="symbols">
               <t>
@@ -438,7 +501,113 @@
               </t>
             </list>
           </t>
-          <t> 
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">full_disk_encryption</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  Boolean. True if data stored on the
+                device is fully encrypted at rest.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_id</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. A unique identifier for the device.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_os</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. The name of the operating system
+                running on the device such as "iOS" or "Android".
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_os_version</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. The current version of the operating system.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_vendor</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. The vendor of the device such as "Apple
+                or "Google".
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">device_model</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. The model of the device
+                such as "iPhone X" or "Pixel 2"
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
             <?rfc subcompact="yes"?>
             <list style="symbols">
               <t>
@@ -448,6 +617,42 @@
                 Device Posture Signal Key Description:  Dictionary. An attestation
                 from the operating system, containing a signed-statement about
                 the device and/or the app.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">app_id</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  String. The platform-specific identifier (URI) for the application.
+                For Android, the format of the URI is android:apk-key-hash:&lt;hash-of-apk-signing-cert&gt;.
+                For iOS, the format of URI is ios:bundle-id:&lt;ios-bundle-id-of-app&gt;.
+              </t>
+              <t>
+                Change Controller: IESG
+              </t>
+              <t>
+                Specification Document(s): <xref target="device_posture_signals"/> of [[ this specification ]]
+              </t>
+            </list>
+          </t>
+          <t>
+            <?rfc subcompact="yes"?>
+            <list style="symbols">
+              <t>
+                Device Posture Signal Key: <spanx style="verb">app_managed</spanx>
+              </t>
+              <t>
+                Device Posture Signal Key Description:  Boolean. True if the app is managed by a MDM/EMM system.
               </t>
               <t>
                 Change Controller: IESG
